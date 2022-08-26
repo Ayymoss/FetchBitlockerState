@@ -15,15 +15,15 @@ public static class HandleData
 
     internal static DataModel GetBitlockerState()
     {
-        var p = new Process();
+        var process = new Process();
 
-        p.StartInfo.UseShellExecute = false;
-        p.StartInfo.RedirectStandardOutput = true;
-        p.StartInfo.FileName = "manage-bde";
-        p.StartInfo.Arguments = " -status";
-        p.Start();
-        var output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.FileName = "manage-bde";
+        process.StartInfo.Arguments = " -status";
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
 
         var strArr = output.Split("\n");
         var conversion = string.Empty;
@@ -59,7 +59,6 @@ public static class HandleData
             state = BitLockerState.Unknown;
         }
 
-
-        return new DataModel {State = state};
+        return new DataModel {State = state, HostName = Environment.MachineName};
     }
 }

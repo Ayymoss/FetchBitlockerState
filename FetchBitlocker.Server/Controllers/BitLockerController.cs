@@ -12,7 +12,7 @@ public class BitLockerController : ControllerBase
     public ActionResult<string> BitLocker([FromBody] DataModel dataModel)
     {
         if (dataModel.State == BitLockerState.Unknown) return NoContent();
-        
+
         var dataList = new List<DataModel>();
         lock (dataList)
         {
