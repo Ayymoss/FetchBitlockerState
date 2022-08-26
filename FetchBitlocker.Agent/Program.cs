@@ -24,6 +24,7 @@ public static class TestSendAgent
         if (exit)
         {
             Console.ReadKey();
+            Environment.Exit(1);
         }
 
         await HandleData.SendModelData(HandleData.GetBitlockerState(), args[1]);
