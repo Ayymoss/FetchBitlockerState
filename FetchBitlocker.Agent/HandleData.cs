@@ -6,10 +6,10 @@ namespace FetchBitlocker.Agent;
 
 public static class HandleData
 {
-    internal static async Task SendModelData(DataModel dataModel)
+    internal static async Task SendModelData(DataModel dataModel, string hostname)
     {
         var client = new HttpClient();
-        var response = await client.PostAsJsonAsync("http://localhost:5167/BitLocker/BitLocker", dataModel);
+        var response = await client.PostAsJsonAsync($"http://{hostname}:5167/BitLocker/BitLocker", dataModel);
         Console.WriteLine($"Response {await response.Content.ReadAsStringAsync()}");
     }
 
