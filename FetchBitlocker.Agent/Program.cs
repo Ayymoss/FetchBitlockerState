@@ -7,15 +7,8 @@ public static class TestSendAgent
     public static async Task Main(string[] args)
     {
         args = args.Append("---EXIT").ToArray();
-        
-        if (args[0] == "---EXIT")
-        {
-            Console.WriteLine("Argument Required: --hostname <hostname/ip>");
-            Console.ReadKey();
-            Environment.Exit(1);
-        }
-
         var exit = false;
+
         if (args[0] != "--hostname")
         {
             Console.WriteLine("Argument Required: --hostname <hostname/ip>");
@@ -24,18 +17,16 @@ public static class TestSendAgent
 
         if (!IsAdministrator())
         {
-            Console.WriteLine("You must run this as an administrator.");
+            Console.WriteLine("Elevation Required: You must run this as an administrator");
             exit = true;
-        }
-        else
-        {
-            await HandleData.SendModelData(HandleData.GetBitlockerState(), args[1]);
         }
 
         if (exit)
         {
             Console.ReadKey();
         }
+
+        await HandleData.SendModelData(HandleData.GetBitlockerState(), args[1]);
     }
 
     private static bool IsAdministrator() =>
