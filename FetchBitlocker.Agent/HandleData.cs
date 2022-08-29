@@ -1,16 +1,18 @@
 ﻿using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FetchBitlocker.Shared;
 
 namespace FetchBitlocker.Agent;
 
 public static class HandleData
 {
-    internal static async Task SendModelData(DataModel dataModel, string hostname)
+    internal static async Task SendModelData(EndPointData endPointData, string hostname)
     {
         var client = new HttpClient();
-        var response = await client.PostAsJsonAsync($"http://{hostname}:5167/BitLocker/BitLocker", dataModel);
-        Console.WriteLine($"Response {await response.Content.ReadAsStringAsync()}");
+        var response = await client.PostAsJsonAsync($"http://{hostname}:5000/api/BitLocker", endPointData);
+        Console.WriteLine($"Server Response: {await response.Content.ReadAsStringAsync()}");
+        response.EnsureSuccessStatusCode();
     }
 
     internal static DataModel GetBitlockerState()

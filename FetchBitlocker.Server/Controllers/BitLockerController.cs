@@ -5,20 +5,26 @@ using Microsoft.AspNetCore.Mvc;
 namespace FetchBitlocker.Server.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class BitLockerController : ControllerBase
 {
-    [HttpPost("BitLocker")]
-    public ActionResult<string> BitLocker([FromBody] DataModel dataModel)
+    private string _apiKey => Environment.OSVersion.Platform == PlatformID.Unix
+        ? Environment.GetEnvironmentVariable("FETCH_BL_API_KEY")
+        : Environment.GetEnvironmentVariable("FETCH_BL_API_KEY", EnvironmentVariableTarget.User);
+
+    [HttpPost]
+    public ActionResult<string> Submit([FromBody] EndPointData endPointData)
     {
-        if (dataModel.State == BitLockerState.Unknown) return NoContent();
+        var dataModel = endPointData.DataModel;
+        if (endPointData.Key != _apiKey) return Unauthorized("Invalid API Key");
+        if (dataModel.State == BitLockerState.Unknown) return BadRequest("State is unknown");
 
         var dataList = new List<DataModel>();
         lock (dataList)
         {
-            if (System.IO.File.Exists("bitlocker.json"))
+            if (System.IO.File.Exists("BitLockerExport.json"))
             {
-                var json = System.IO.File.ReadAllText("bitlocker.json");
+                var json = System.IO.File.ReadAllText("BitLockerExport.json");
                 dataList = JsonSerializer.Deserialize<List<DataModel>>(json);
             }
 
@@ -33,7 +39,7 @@ public class BitLockerController : ControllerBase
             }
 
             var dataListJson = JsonSerializer.Serialize(dataList, new JsonSerializerOptions {WriteIndented = true});
-            System.IO.File.WriteAllText("bitlocker.json", dataListJson);
+            System.IO.File.WriteAllText("BitLockerExport.json", dataListJson);
 
             Console.WriteLine($"{dataModel.HostName} added!");
             return Ok($"{dataModel.HostName} added!");

@@ -1,4 +1,31 @@
+var apiKey = Environment.OSVersion.Platform == PlatformID.Unix
+    ? Environment.GetEnvironmentVariable("FETCH_BL_API_KEY")
+    : Environment.GetEnvironmentVariable("FETCH_BL_API_KEY", EnvironmentVariableTarget.User);
+
+if (apiKey == null)
+{
+    Console.WriteLine("Please set the environment variable (String) FETCH_BL_API_KEY to your API key.");
+    Console.ReadKey();
+    Environment.Exit(1);
+}
+
 var builder = WebApplication.CreateBuilder(args);
+
+#if !DEBUG
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000);
+    options.ListenAnyIP(5001, configure => configure.UseHttps());
+});
+#endif
+
+#if DEBUG
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(5000);
+    options.ListenLocalhost(5001, configure => configure.UseHttps());
+});
+#endif
 
 // Add services to the container.
 
@@ -16,7 +43,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
