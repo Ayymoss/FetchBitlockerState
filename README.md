@@ -1,4 +1,4 @@
-# FetchBitlockerState
+# Fetch BitLocker State from Hosts
 
 Client CLI Application to send its BitLocker state to centralised host.
 Useful because Microsoft in their infinite wisdom made it non-trivial to get "Suspended" BitLocker state. 
