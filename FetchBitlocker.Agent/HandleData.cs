@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Management.Automation;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FetchBitlocker.Shared;
@@ -15,50 +16,22 @@ public static class HandleData
         response.EnsureSuccessStatusCode();
     }
 
+
     internal static DataModel GetBitlockerState()
     {
-        var process = new Process();
+        var bitLockerSuspendState = PowerShell.Create();
+        bitLockerSuspendState.AddScript(@"Get-CimInstance -Namespace 'ROOT/CIMV2/Security/MicrosoftVolumeEncryption' -Class Win32_EncryptableVolume -Filter ""DriveLetter='C:'"" | Invoke-CimMethod -MethodName GetSuspendCount");
+        var bitLockerSuspendStateResult = Convert.ToInt32(bitLockerSuspendState.Invoke()[0].Members["SuspendCount"].Value);
 
-        process.StartInfo.UseShellExecute = false;
-        process.StartInfo.RedirectStandardOutput = true;
-        process.StartInfo.FileName = "manage-bde";
-        process.StartInfo.Arguments = " -status";
-        process.Start();
-        var output = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
+        var state = bitLockerSuspendStateResult > 0 ? BitLockerState.Suspended : BitLockerState.Unknown;
 
-        var strArr = output.Split("\n");
-        var conversion = string.Empty;
-        var protection = string.Empty;
-        foreach (var line in strArr)
+        if (state == BitLockerState.Unknown)
         {
-            if (line.Contains("Conversion Status"))
-            {
-                conversion = line.Replace(" ", "").Split(":")[1];
-            }
-
-            if (line.Contains("Protection Status"))
-            {
-                protection = line.Replace(" ", "").Split(":")[1];
-            }
-        }
-
-        BitLockerState state;
-        if (conversion.Contains("FullyDecrypted") && protection.Contains("ProtectionOff"))
-        {
-            state = BitLockerState.Unprotected;
-        }
-        else if (conversion.Contains("UsedSpaceOnlyEncrypted") && protection.Contains("ProtectionOff"))
-        {
-            state = BitLockerState.Suspended;
-        }
-        else if (conversion.Contains("UsedSpaceOnlyEncrypted") && protection.Contains("ProtectionOn"))
-        {
-            state = BitLockerState.Protected;
-        }
-        else
-        {
-            state = BitLockerState.Unknown;
+            var bitLockerState = PowerShell.Create();
+            bitLockerState.AddScript(@"Get-CimInstance -Namespace 'ROOT/CIMV2/Security/MicrosoftVolumeEncryption' -Class Win32_EncryptableVolume -Filter ""DriveLetter='C:'""");
+            var bitLockerStateResult = Convert.ToInt32(bitLockerState.Invoke()[0].Members["ProtectionStatus"].Value);
+            
+            state = bitLockerStateResult > 0 ? BitLockerState.Protected : BitLockerState.Unprotected;
         }
 
         return new DataModel {State = state, HostName = Environment.MachineName};
