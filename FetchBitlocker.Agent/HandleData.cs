@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using System.Management.Automation;
+﻿using System.Management;
 using System.Net.Http.Json;
-using System.Text.Json;
 using FetchBitlocker.Shared;
 
 namespace FetchBitlocker.Agent;
@@ -16,24 +14,37 @@ public static class HandleData
         response.EnsureSuccessStatusCode();
     }
 
-
     internal static DataModel GetBitlockerState()
     {
-        var bitLockerSuspendState = PowerShell.Create();
-        bitLockerSuspendState.AddScript(@"Get-CimInstance -Namespace 'ROOT/CIMV2/Security/MicrosoftVolumeEncryption' -Class Win32_EncryptableVolume -Filter ""DriveLetter='C:'"" | Invoke-CimMethod -MethodName GetSuspendCount");
-        var bitLockerSuspendStateResult = Convert.ToInt32(bitLockerSuspendState.Invoke()[0].Members["SuspendCount"].Value);
-
-        var state = bitLockerSuspendStateResult > 0 ? BitLockerState.Suspended : BitLockerState.Unknown;
-
-        if (state == BitLockerState.Unknown)
+#pragma warning disable CA1416
+        var path = new ManagementPath(@"\ROOT\CIMV2\Security\MicrosoftVolumeEncryption")
         {
-            var bitLockerState = PowerShell.Create();
-            bitLockerState.AddScript(@"Get-CimInstance -Namespace 'ROOT/CIMV2/Security/MicrosoftVolumeEncryption' -Class Win32_EncryptableVolume -Filter ""DriveLetter='C:'""");
-            var bitLockerStateResult = Convert.ToInt32(bitLockerState.Invoke()[0].Members["ProtectionStatus"].Value);
-            
-            state = bitLockerStateResult > 0 ? BitLockerState.Protected : BitLockerState.Unprotected;
+            ClassName = "Win32_EncryptableVolume",
+            Server = Environment.MachineName
+        };
+        var scope = new ManagementScope(path);
+        var objectSearcher = new ManagementClass(scope, path, new ObjectGetOptions());
+
+        foreach (var instance in objectSearcher.GetInstances())
+        {
+            if (instance["DriveLetter"].ToString() != "C:") continue;
+            if (instance["ProtectionStatus"].ToString() == "0" && instance["ConversionStatus"].ToString() == "0")
+            {
+                return new DataModel {State = BitLockerState.Unprotected, HostName = Environment.MachineName};
+            }
+
+            if (instance["ProtectionStatus"].ToString() == "0" && instance["ConversionStatus"].ToString() == "1")
+            {
+                return new DataModel {State = BitLockerState.Suspended, HostName = Environment.MachineName};
+            }
+
+            if (instance["ProtectionStatus"].ToString() == "1" && instance["ConversionStatus"].ToString() == "1")
+            {
+                return new DataModel {State = BitLockerState.Protected, HostName = Environment.MachineName};
+            }
         }
 
-        return new DataModel {State = state, HostName = Environment.MachineName};
+        return new DataModel {State = BitLockerState.Unknown, HostName = Environment.MachineName};
+#pragma warning restore CA1416
     }
 }
